@@ -14,7 +14,7 @@ export async function register(req, res) {
     const { username, email, password } = req.body;
 
     const isUserAlreadyExists = await userModel.findOne({
-        $or: [ { email }, { username } ]
+        $or: [{ email }, { username }]
     })
 
     if (isUserAlreadyExists) {
@@ -38,7 +38,7 @@ export async function register(req, res) {
                 <p>Hi ${username},</p>
                 <p>Thank you for registering at <strong>Perplexity</strong>. We're excited to have you on board!</p>
                 <p>Please verify your email address by clicking the link below:</p>
-                <a href="http://localhost:3000/api/auth/verify-email?token=${emailVerificationToken}">Verify Email</a>
+                <a href="http://localhost:8000/api/auth/verify-email?token=${emailVerificationToken}">Verify Email</a>
                 <p>If you did not create an account, please ignore this email.</p>
                 <p>Best regards,<br>The Perplexity Team</p>
         `
@@ -175,7 +175,7 @@ export async function verifyEmail(req, res) {
             `
         <h1>Email Verified Successfully!</h1>
         <p>Your email has been verified. You can now log in to your account.</p>
-        <a href="http://localhost:3000/login">Go to Login</a>
+        <a href="http://localhost:8000/login">Go to Login</a>
     `
 
         return res.send(html);

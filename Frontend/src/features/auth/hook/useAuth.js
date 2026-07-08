@@ -10,7 +10,11 @@ export function useAuth() {
     async function handleRegister(formData) {
         try {
             dispatch(setLoading(true));
-            const data = await register({ email, username, password });
+            const data = await register({
+                email: formData.email,
+                username: formData.username,
+                password: formData.password,
+            });
 
         } catch (error) {
             dispatch(setError(error.response?.data?.message || 'Registration failed'));
@@ -24,7 +28,10 @@ export function useAuth() {
     async function handleLogin(formData) {
         try {
             dispatch(setLoading(true));
-            const data = await login({ email, password });
+            const data = await login({
+                email: formData.email,
+                password: formData.password,
+            });
             dispatch(setUser(data));
         } catch (error) {
             dispatch(setError(error.response?.data?.message || 'Login failed'));

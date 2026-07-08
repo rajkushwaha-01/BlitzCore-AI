@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import {Link} from "react-router-dom";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,24 +26,27 @@ const Login = () => {
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
       <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl shadow-black/40 backdrop-blur">
         <div className="mb-6 flex rounded-full bg-slate-800 p-1">
-          <button
+          <Link  
             type="button"
+            to="/login"
             onClick={() => setIsLogin(true)}
-            className={`w-1/2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+            className={`w-1/2 rounded-full px-4 py-2 text-sm flex items-center justify-center font-semibold transition ${
               isLogin ? 'bg-red-500 text-white' : 'text-slate-300 hover:text-white'
+              
             }`}
           >
             Login
-          </button>
-          <button
+          </Link>
+          <Link
             type="button"
+            to="/register" 
             onClick={() => setIsLogin(false)}
-            className={`w-1/2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+            className={`w-1/2 rounded-full px-4 py-2 text-sm flex items-center justify-center font-semibold transition ${
               !isLogin ? 'bg-red-500 text-white' : 'text-slate-300 hover:text-white'
             }`}
           >
             Register
-          </button>
+          </Link>
         </div>
 
         <h2 className="text-2xl font-semibold">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 const Register = () => {
+  const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
     username: '',
@@ -23,6 +24,30 @@ const Register = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
       <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl shadow-black/40 backdrop-blur">
+      <div className="mb-6 flex rounded-full bg-slate-800 p-1">
+          <button
+            type="button"
+            onClick={() => setIsLogin(true)}
+            className={`w-1/2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+              isLogin ? 'bg-red-500 text-white' : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            Login
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsLogin(false)}
+            className={`w-1/2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+              !isLogin ? 'bg-red-500 text-white' : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            Register
+          </button>
+        </div>
+
+        
+
+
         <h2 className="text-2xl font-semibold">Create your account</h2>
         <p className="mt-2 text-sm text-slate-400">
           Register to get started with your new account.
@@ -84,13 +109,6 @@ const Register = () => {
             Register
           </button>
         </form>
-
-        <p className="mt-4 text-center text-sm text-slate-400">
-          Already have an account?{' '}
-          <a href="/login" className="font-medium text-red-400 hover:text-red-300">
-            Sign in
-          </a>
-        </p>
       </div>
     </div>
   );

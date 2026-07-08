@@ -1,0 +1,99 @@
+import { useState } from 'react';
+
+const Register = () => {
+  const [formData, setFormData] = useState({
+    email: '',
+    username: '',
+    password: '',
+  });
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    console.log('Register submitted', formData);
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-slate-100">
+      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl shadow-black/40 backdrop-blur">
+        <h2 className="text-2xl font-semibold">Create your account</h2>
+        <p className="mt-2 text-sm text-slate-400">
+          Register to get started with your new account.
+        </p>
+
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div>
+            <label className="mb-2 block text-sm text-slate-300" htmlFor="email">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="Enter your email"
+              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm text-slate-300" htmlFor="username">
+              Username
+            </label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              placeholder="Choose a username"
+              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm text-slate-300" htmlFor="password">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              placeholder="Enter your password"
+              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full rounded-lg bg-red-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-400"
+          >
+            Register
+          </button>
+        </form>
+
+        <p className="mt-4 text-center text-sm text-slate-400">
+          Already have an account?{' '}
+          <a href="/login" className="font-medium text-red-400 hover:text-red-300">
+            Sign in
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default Register;

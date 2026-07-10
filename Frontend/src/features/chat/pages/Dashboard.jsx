@@ -16,6 +16,8 @@ import {
   Compass,
   Library,
   HelpCircle,
+  Menu,
+  X,
 } from "lucide-react";
 
 /**
@@ -23,16 +25,16 @@ import {
  * Install it in your project first:
  *   npm install gsap
  *
- * Animation map:
- *  - Mount timeline: sidebar slides in, logo pops, nav + history stagger in
- *  - Hero (empty state): headline words rise in, input box springs in
- *  - ModelPicker: height/opacity tween on open, staggered item reveal, chevron rotation
- *  - Nav / history rows: hover slide + icon nudge, active row gets a sliding pill
- *  - Send button: hover scale, click "squash" bounce, idle pulse ring
- *  - Messages: each bubble animates in on arrival (scale + slide + fade)
- *  - Typing indicator: three dots looping bounce while assistant "thinks"
- *  - Scroll: GSAP-tweened auto-scroll to newest message instead of instant jump
- *  - Upgrade button: slow shimmer sweep loop
+ * Responsive strategy:
+ *  - Sidebar is a static column on lg+ screens, and an off-canvas drawer
+ *    below lg (toggled by a hamburger button + backdrop). The slide is a
+ *    plain CSS transform/transition so it never fights the lg:translate-x-0
+ *    override; GSAP is reserved for opacity/stagger, not position, on the
+ *    sidebar shell.
+ *  - Hero heading, message bubbles, and input chrome use fluid Tailwind
+ *    breakpoints (text sizes, max-widths, paddings) rather than fixed px.
+ *  - Selecting a chat or starting a new thread auto-closes the drawer on
+ *    mobile so you're not stuck looking at the sidebar after navigating.
  */
 
 const FONT_IMPORT = `
@@ -150,11 +152,11 @@ function ModelPicker({ model, setModel }) {
         onMouseLeave={(e) =>
           gsap.to(e.currentTarget, { scale: 1, duration: 0.2, ease: "power2.out" })
         }
-        className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-white/10"
+        className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-slate-300 hover:bg-white/10 sm:px-2.5"
       >
-        <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
-        {active.label}
-        <ChevronDown ref={chevronRef} className="h-3.5 w-3.5 text-slate-500" />
+        <Sparkles className="h-3.5 w-3.5 shrink-0 text-cyan-300" />
+        <span className="hidden xs:inline sm:inline">{active.label}</span>
+        <ChevronDown ref={chevronRef} className="h-3.5 w-3.5 shrink-0 text-slate-500" />
       </button>
 
       {rendered && (
@@ -162,7 +164,7 @@ function ModelPicker({ model, setModel }) {
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div
             ref={panelRef}
-            className="absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-xl"
+            className="absolute bottom-full left-0 z-20 mb-2 w-64 max-w-[80vw] overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-xl sm:w-56"
             style={{ visibility: "hidden" }}
           >
             {MODELS.map((m) => (
@@ -193,7 +195,7 @@ function ModelPicker({ model, setModel }) {
                   <p className="text-sm text-slate-100">{m.label}</p>
                   <p className="text-xs text-slate-500">{m.sub}</p>
                 </div>
-                {model === m.id && <Check className="h-4 w-4 text-cyan-300" />}
+                {model === m.id && <Check className="h-4 w-4 shrink-0 text-cyan-300" />}
               </button>
             ))}
           </div>
@@ -233,7 +235,7 @@ function SendButton({ onClick, disabled }) {
   };
 
   return (
-    <div className="relative flex h-8 w-8 items-center justify-center">
+    <div className="relative flex h-8 w-8 shrink-0 items-center justify-center sm:h-8 sm:w-8">
       <span
         ref={ringRef}
         className="pointer-events-none absolute inset-0 rounded-lg bg-cyan-400/40"
@@ -275,7 +277,7 @@ function TypingIndicator() {
   }, []);
 
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-2.5 sm:gap-3">
       <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-violet-500">
         <Zap className="h-3.5 w-3.5 text-slate-950" strokeWidth={2.5} />
       </div>
@@ -310,11 +312,11 @@ function MessageBubble({ role, content }) {
 
   if (role === "assistant") {
     return (
-      <div ref={ref} className="flex items-start gap-3">
+      <div ref={ref} className="flex items-start gap-2.5 sm:gap-3">
         <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-violet-500">
           <Zap className="h-3.5 w-3.5 text-slate-950" strokeWidth={2.5} />
         </div>
-        <div className="max-w-lg rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-slate-100">
+        <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-slate-100 sm:max-w-md md:max-w-lg">
           {content}
         </div>
       </div>
@@ -322,8 +324,8 @@ function MessageBubble({ role, content }) {
   }
 
   return (
-    <div ref={ref} className="flex items-start justify-end gap-3">
-      <div className="max-w-lg rounded-2xl rounded-tr-sm bg-gradient-to-br from-cyan-500 to-violet-600 px-4 py-2.5 text-sm text-white">
+    <div ref={ref} className="flex items-start justify-end gap-2.5 sm:gap-3">
+      <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-gradient-to-br from-cyan-500 to-violet-600 px-4 py-2.5 text-sm text-white sm:max-w-md md:max-w-lg">
         {content}
       </div>
       <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10">
@@ -347,6 +349,7 @@ export default function ChatDashboard() {
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const bottomRef = useRef(null);
   const scrollContainerRef = useRef(null);
 
@@ -359,25 +362,26 @@ export default function ChatDashboard() {
   const heroInputRef = useRef(null);
   const activePillRef = useRef(null);
   const historyItemRefs = useRef({});
+  const overlayRef = useRef(null);
+  const hamburgerIconRef = useRef(null);
 
   useEffect(() => {
     chat.initializeSocketConnection();
   }, []);
 
-  /* -------- Mount timeline: sidebar + logo + nav + history -------- */
+  /* -------- Mount timeline: sidebar contents fade/stagger in --------
+     NOTE: no x-transform on the sidebar shell itself here, since the
+     drawer's open/close position is fully owned by CSS translate
+     classes below (so GSAP and the responsive drawer never fight). */
   useLayoutEffect(() => {
     const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
-    tl.fromTo(
-      sidebarRef.current,
-      { x: -40, autoAlpha: 0 },
-      { x: 0, autoAlpha: 1, duration: 0.5 }
-    )
+    tl.fromTo(sidebarRef.current, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4 })
       .fromTo(
         logoRef.current,
         { scale: 0.4, rotate: -25, autoAlpha: 0 },
         { scale: 1, rotate: 0, autoAlpha: 1, duration: 0.5, ease: "back.out(2)" },
-        "-=0.3"
+        "-=0.25"
       )
       .fromTo(
         navRef.current?.children || [],
@@ -436,7 +440,7 @@ export default function ChatDashboard() {
       duration: 0.4,
       ease: "power3.out",
     });
-  }, [activeChat, chats]);
+  }, [activeChat, chats, sidebarOpen]);
 
   /* -------- Smooth GSAP auto-scroll on new messages -------- */
   useEffect(() => {
@@ -448,6 +452,26 @@ export default function ChatDashboard() {
       ease: "power2.out",
     });
   }, [messages, isTyping]);
+
+  /* -------- Mobile drawer: backdrop fade + hamburger morph -------- */
+  useEffect(() => {
+    if (overlayRef.current) {
+      gsap.to(overlayRef.current, {
+        autoAlpha: sidebarOpen ? 1 : 0,
+        duration: 0.25,
+        ease: "power2.out",
+      });
+    }
+    if (hamburgerIconRef.current) {
+      gsap.to(hamburgerIconRef.current, {
+        rotate: sidebarOpen ? 90 : 0,
+        duration: 0.3,
+        ease: "back.out(2)",
+      });
+    }
+  }, [sidebarOpen]);
+
+  const closeSidebarOnMobile = () => setSidebarOpen(false);
 
   const send = () => {
     if (!query.trim()) return;
@@ -486,28 +510,46 @@ export default function ChatDashboard() {
     });
 
   return (
-    <div className="flex h-screen w-full bg-slate-950 text-slate-100 font-body">
+    <div className="flex h-screen w-full overflow-hidden bg-slate-950 text-slate-100 font-body">
       <style>{FONT_IMPORT}</style>
 
-      {/* Sidebar */}
+      {/* Mobile backdrop */}
+      <div
+        ref={overlayRef}
+        onClick={closeSidebarOnMobile}
+        style={{ visibility: sidebarOpen ? "visible" : "hidden", opacity: 0 }}
+        className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
+      />
+
+      {/* Sidebar: static column on lg+, off-canvas drawer below lg */}
       <aside
         ref={sidebarRef}
-        className="flex w-64 shrink-0 flex-col border-r border-white/5 px-4 py-6"
+        className={`fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] shrink-0 flex-col border-r border-white/5 bg-slate-950 px-4 py-6 transition-transform duration-300 ease-out
+        lg:static lg:z-auto lg:w-64 lg:max-w-none lg:translate-x-0
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        {/* Logo + name */}
-        <div className="mb-6 flex items-center gap-2.5 px-2">
-          <div
-            ref={logoRef}
-            className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500"
+        {/* Logo + name + mobile close button */}
+        <div className="mb-6 flex items-center justify-between px-2">
+          <div className="flex items-center gap-2.5">
+            <div
+              ref={logoRef}
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500"
+            >
+              <Zap className="h-4.5 w-4.5 text-slate-950" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="font-display text-lg font-semibold leading-tight tracking-tight">
+                Nexus
+              </p>
+              <p className="text-xs text-slate-500">Pro Plan</p>
+            </div>
+          </div>
+          <button
+            onClick={closeSidebarOnMobile}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white/5 hover:text-slate-200 lg:hidden"
           >
-            <Zap className="h-4.5 w-4.5 text-slate-950" strokeWidth={2.5} />
-          </div>
-          <div>
-            <p className="font-display text-lg font-semibold leading-tight tracking-tight">
-              Nexus
-            </p>
-            <p className="text-xs text-slate-500">Pro Plan</p>
-          </div>
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Nav */}
@@ -569,6 +611,7 @@ export default function ChatDashboard() {
                 });
               setMessages([]);
               setActiveChat(null);
+              closeSidebarOnMobile();
             }}
             onMouseEnter={(e) => {
               navHover(e, true);
@@ -598,7 +641,10 @@ export default function ChatDashboard() {
               <button
                 key={c.id}
                 ref={(el) => (historyItemRefs.current[c.id] = el)}
-                onClick={() => setActiveChat(c.id)}
+                onClick={() => {
+                  setActiveChat(c.id);
+                  closeSidebarOnMobile();
+                }}
                 onMouseEnter={(e) =>
                   gsap.to(e.currentTarget, { x: 4, duration: 0.2, ease: "power2.out" })
                 }
@@ -666,24 +712,42 @@ export default function ChatDashboard() {
 
       {/* Main */}
       <main className="flex min-w-0 flex-1 flex-col">
+        {/* Mobile top bar: hamburger + current title, hidden on lg+ */}
+        <div className="flex items-center gap-3 border-b border-white/5 px-4 py-3 lg:hidden">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-300 hover:bg-white/5"
+          >
+            <Menu ref={hamburgerIconRef} className="h-5 w-5" />
+          </button>
+          <span className="truncate font-display text-sm font-medium text-slate-200">
+            {hasStarted ? chats.find((c) => c.id === activeChat)?.title ?? "New chat" : "Nexus"}
+          </span>
+        </div>
+
         {!hasStarted ? (
           /* Empty state: centered hero + input */
-          <div ref={heroRef} className="flex flex-1 flex-col items-center justify-center px-6">
-            <h1 className="font-display text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+          <div
+            ref={heroRef}
+            className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-6"
+          >
+            <h1 className="text-center font-display text-3xl font-semibold leading-tight tracking-tight text-white sm:text-4xl md:text-5xl">
               {"What are we building?".split(" ").map((w, i) => (
-                <span key={i} data-word className="mr-3 inline-block">
+                <span key={i} data-word className="mr-2 inline-block sm:mr-3">
                   {w}
                 </span>
               ))}
             </h1>
-            <p className="mt-3 text-sm text-slate-400">Start a conversation to get going.</p>
+            <p className="mt-3 text-center text-sm text-slate-400">
+              Start a conversation to get going.
+            </p>
 
             <div
               ref={heroInputRef}
-              className="mt-8 w-full max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur"
+              className="mt-8 w-full max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-2.5 backdrop-blur sm:p-3"
             >
               <div className="flex items-center gap-2 px-1">
-                <Search className="h-4 w-4 text-slate-500" />
+                <Search className="h-4 w-4 shrink-0 text-slate-500" />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -701,7 +765,7 @@ export default function ChatDashboard() {
                     })
                   }
                   placeholder="Ask anything..."
-                  className="flex-1 bg-transparent py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                  className="min-w-0 flex-1 bg-transparent py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
                 />
               </div>
               <div className="mt-2 flex items-center justify-between px-1">
@@ -713,7 +777,8 @@ export default function ChatDashboard() {
         ) : (
           /* Active chat: messages + bottom-pinned input */
           <>
-            <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
+            {/* Desktop chat header (mobile uses the top bar above) */}
+            <div className="hidden items-center justify-between border-b border-white/5 px-6 py-4 lg:flex">
               <span className="font-display text-sm font-medium text-slate-200">
                 {chats.find((c) => c.id === activeChat)?.title ?? "New chat"}
               </span>
@@ -722,8 +787,8 @@ export default function ChatDashboard() {
               </span>
             </div>
 
-            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-8">
-              <div className="mx-auto flex max-w-2xl flex-col gap-6">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
+              <div className="mx-auto flex max-w-2xl flex-col gap-5 sm:gap-6">
                 {messages.map((m, i) => (
                   <MessageBubble key={i} role={m.role} content={m.content} />
                 ))}
@@ -732,8 +797,8 @@ export default function ChatDashboard() {
               </div>
             </div>
 
-            <div className="border-t border-white/5 px-6 py-4">
-              <div className="mx-auto w-full max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur">
+            <div className="border-t border-white/5 px-4 py-3 sm:px-6 sm:py-4">
+              <div className="mx-auto w-full max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-2.5 backdrop-blur sm:p-3">
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -751,7 +816,7 @@ export default function ChatDashboard() {
                     })
                   }
                   placeholder="Message Nexus..."
-                  className="w-full bg-transparent px-1 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                  className="w-full min-w-0 bg-transparent px-1 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
                 />
                 <div className="mt-2 flex items-center justify-between px-1">
                   <ModelPicker model={model} setModel={setModel} />

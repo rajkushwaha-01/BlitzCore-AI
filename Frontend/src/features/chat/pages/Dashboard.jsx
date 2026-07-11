@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useChat } from "../hooks/useChat";
+import { setCurrentChatId } from "../chat.sclice";
 import gsap from "gsap";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Search,
   Plus,
@@ -25,16 +28,26 @@ import {
  * Install it in your project first:
  *   npm install gsap
  *
- * Responsive strategy:
- *  - Sidebar is a static column on lg+ screens, and an off-canvas drawer
- *    below lg (toggled by a hamburger button + backdrop). The slide is a
- *    plain CSS transform/transition so it never fights the lg:translate-x-0
- *    override; GSAP is reserved for opacity/stagger, not position, on the
- *    sidebar shell.
- *  - Hero heading, message bubbles, and input chrome use fluid Tailwind
- *    breakpoints (text sizes, max-widths, paddings) rather than fixed px.
- *  - Selecting a chat or starting a new thread auto-closes the drawer on
- *    mobile so you're not stuck looking at the sidebar after navigating.
+ * Data source: this reads chats/messages straight from the redux
+ * "chat" slice via useSelector, and drives them through the useChat()
+ * hook (handleGetChats / handleOpenChat / handleSendMessage) instead of
+ * local dummy state.
+ *
+ * FIX #1 (this file): messages in MongoDB are stored with role "ai" /
+ * "user" (see your Compass screenshot), but MessageBubble was checking
+ * `role === "assistant"`, which never matched — so every message fell
+ * into the "user" branch and rendered on the right. Fixed below by
+ * checking for role === "ai" (while still accepting "assistant" too).
+ *
+ * FIX #2 (typing indicator not clearing) is NOT in this file — the
+ * TypingIndicator here just renders off `isLoading` from
+ * `state.chat.isLoading`. That flag has to be flipped back to false in
+ * chat.sclice.js / useChat.js once the AI message arrives (via thunk
+ * fulfilled case or your socket listener). Send me those two files and
+ * I'll patch the actual source of the stuck loading state.
+ *
+ * Responsive strategy is unchanged: static sidebar on lg+, off-canvas
+ * drawer below lg, fluid hero/message/input sizing.
  */
 
 const FONT_IMPORT = `
@@ -62,12 +75,6 @@ const FONT_IMPORT = `
 const MODELS = [
   { id: "precision", label: "Precision", sub: "Best for deep synthesis" },
   { id: "fast", label: "Fast Draft", sub: "Speed-optimized" },
-];
-
-const INITIAL_CHATS = [
-  { id: 1, title: "Refactor auth middleware", time: "2 min ago" },
-  { id: 2, title: "Design token system", time: "1 hr ago" },
-  { id: 3, title: "Debug websocket memory leak", time: "Yesterday" },
 ];
 
 /* ---------------------------------------------------------- */
@@ -295,29 +302,82 @@ function TypingIndicator() {
 }
 
 /* ---------------------------------------------------------- */
+/* Markdown rendering for AI responses (bold, lists, code,     */
+/* headings, links) — styled to match the dark bubble theme.   */
+/* ---------------------------------------------------------- */
+
+const markdownComponents = {
+  p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+  strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+  em: ({ children }) => <em className="italic text-slate-200">{children}</em>,
+  ul: ({ children }) => <ul className="mb-2 ml-4 list-disc space-y-1 last:mb-0">{children}</ul>,
+  ol: ({ children }) => <ol className="mb-2 ml-4 list-decimal space-y-1 last:mb-0">{children}</ol>,
+  li: ({ children }) => <li className="pl-0.5">{children}</li>,
+  h1: ({ children }) => <h1 className="mb-2 mt-1 text-base font-semibold text-white">{children}</h1>,
+  h2: ({ children }) => <h2 className="mb-2 mt-1 text-[15px] font-semibold text-white">{children}</h2>,
+  h3: ({ children }) => <h3 className="mb-1.5 mt-1 text-sm font-semibold text-white">{children}</h3>,
+  a: ({ children, href }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-cyan-300 underline underline-offset-2 hover:text-cyan-200"
+    >
+      {children}
+    </a>
+  ),
+  code: ({ inline, children }) =>
+    inline ? (
+      <code className="rounded bg-black/40 px-1.5 py-0.5 font-mono text-[13px] text-cyan-200">
+        {children}
+      </code>
+    ) : (
+      <code className="block overflow-x-auto rounded-lg bg-black/40 p-3 font-mono text-[13px] text-cyan-100">
+        {children}
+      </code>
+    ),
+  pre: ({ children }) => (
+    <pre className="mb-2 overflow-x-auto rounded-lg bg-black/40 last:mb-0">{children}</pre>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="mb-2 border-l-2 border-cyan-400/40 pl-3 text-slate-300 last:mb-0">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="my-3 border-white/10" />,
+};
+
+/* ---------------------------------------------------------- */
 /* Message bubble: animates itself in on first mount           */
+/* FIXED: DB stores role as "ai" / "user" (see Compass         */
+/* screenshot), not "assistant" — so we check for "ai" here.   */
+/* FIXED: AI content is markdown (**bold**, lists, etc.) —     */
+/* now rendered through react-markdown instead of raw text.    */
 /* ---------------------------------------------------------- */
 
 function MessageBubble({ role, content }) {
   const ref = useRef(null);
+  const isAi = role === "ai" || role === "assistant";
 
   useLayoutEffect(() => {
-    const fromX = role === "user" ? 24 : -24;
+    const fromX = isAi ? -24 : 24;
     gsap.fromTo(
       ref.current,
       { autoAlpha: 0, x: fromX, y: 10, scale: 0.94 },
       { autoAlpha: 1, x: 0, y: 0, scale: 1, duration: 0.45, ease: "back.out(1.6)" }
     );
-  }, [role]);
+  }, [isAi]);
 
-  if (role === "assistant") {
+  if (isAi) {
     return (
       <div ref={ref} className="flex items-start gap-2.5 sm:gap-3">
         <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-violet-500">
           <Zap className="h-3.5 w-3.5 text-slate-950" strokeWidth={2.5} />
         </div>
         <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-slate-100 sm:max-w-md md:max-w-lg">
-          {content}
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            {content}
+          </ReactMarkdown>
         </div>
       </div>
     );
@@ -341,14 +401,17 @@ function MessageBubble({ role, content }) {
 
 export default function ChatDashboard() {
   const chat = useChat();
-  const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
 
-  const [chats] = useState(INITIAL_CHATS);
-  const [activeChat, setActiveChat] = useState(1);
+  const { user } = useSelector((state) => state.auth);
+  const {
+    chats: chatsById = {},
+    currentChatId,
+    isLoading,
+  } = useSelector((state) => state.chat);
+
   const [model, setModel] = useState("precision");
   const [query, setQuery] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [isTyping, setIsTyping] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const bottomRef = useRef(null);
   const scrollContainerRef = useRef(null);
@@ -365,8 +428,18 @@ export default function ChatDashboard() {
   const overlayRef = useRef(null);
   const hamburgerIconRef = useRef(null);
 
+  // Chat list, newest first, and the active chat's messages — both derived
+  // straight from the redux "chat" slice rather than local dummy state.
+  const chatList = Object.values(chatsById).sort(
+    (a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated)
+  );
+  const messages = chatsById[currentChatId]?.messages || [];
+  const hasStarted = messages.length > 0;
+
   useEffect(() => {
     chat.initializeSocketConnection();
+    chat.handleGetChats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* -------- Mount timeline: sidebar contents fade/stagger in --------
@@ -407,7 +480,7 @@ export default function ChatDashboard() {
 
   /* -------- Hero entrance (empty state only) -------- */
   useLayoutEffect(() => {
-    if (messages.length > 0 || !heroRef.current) return;
+    if (hasStarted || !heroRef.current) return;
 
     const words = heroRef.current.querySelectorAll("[data-word]");
     const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
@@ -425,11 +498,11 @@ export default function ChatDashboard() {
 
     return () => tl.kill();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length === 0]);
+  }, [hasStarted]);
 
   /* -------- Active chat sliding pill -------- */
   useLayoutEffect(() => {
-    const target = historyItemRefs.current[activeChat];
+    const target = historyItemRefs.current[currentChatId];
     if (!target || !activePillRef.current) return;
     const parentRect = target.parentElement.getBoundingClientRect();
     const rect = target.getBoundingClientRect();
@@ -440,7 +513,7 @@ export default function ChatDashboard() {
       duration: 0.4,
       ease: "power3.out",
     });
-  }, [activeChat, chats, sidebarOpen]);
+  }, [currentChatId, chatList.length, sidebarOpen]);
 
   /* -------- Smooth GSAP auto-scroll on new messages -------- */
   useEffect(() => {
@@ -451,7 +524,7 @@ export default function ChatDashboard() {
       duration: 0.6,
       ease: "power2.out",
     });
-  }, [messages, isTyping]);
+  }, [messages.length, isLoading]);
 
   /* -------- Mobile drawer: backdrop fade + hamburger morph -------- */
   useEffect(() => {
@@ -475,24 +548,29 @@ export default function ChatDashboard() {
 
   const send = () => {
     if (!query.trim()) return;
-    const userMsg = { role: "user", content: query };
-    setMessages((m) => [...m, userMsg]);
+    const text = query;
     setQuery("");
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content:
-            "Got it — here's how I'd approach that. Let me know if you want me to go deeper on any part.",
-        },
-      ]);
-    }, 900);
+    chat.handleSendMessage({ message: text, chatId: currentChatId });
   };
 
-  const hasStarted = messages.length > 0;
+  const openChat = (chatId) => {
+    chat.handleOpenChat(chatId, chatsById);
+    closeSidebarOnMobile();
+  };
+
+  const startNewThread = (e) => {
+    gsap
+      .timeline()
+      .to(e.currentTarget.querySelector("svg"), {
+        rotate: 180,
+        duration: 0.3,
+        ease: "back.out(2)",
+      })
+      .to(e.currentTarget.querySelector("svg"), { rotate: 0, duration: 0.01 });
+    setQuery("");
+    dispatch(setCurrentChatId(null));
+    closeSidebarOnMobile();
+  };
 
   const navHover = (e, active) =>
     gsap.to(e.currentTarget, {
@@ -597,22 +675,7 @@ export default function ChatDashboard() {
             Library
           </button>
           <button
-            onClick={(e) => {
-              gsap
-                .timeline()
-                .to(e.currentTarget.querySelector("svg"), {
-                  rotate: 180,
-                  duration: 0.3,
-                  ease: "back.out(2)",
-                })
-                .to(e.currentTarget.querySelector("svg"), {
-                  rotate: 0,
-                  duration: 0.01,
-                });
-              setMessages([]);
-              setActiveChat(null);
-              closeSidebarOnMobile();
-            }}
+            onClick={startNewThread}
             onMouseEnter={(e) => {
               navHover(e, true);
               iconNudge(e.currentTarget.querySelector("svg"), true);
@@ -637,14 +700,16 @@ export default function ChatDashboard() {
             style={{ visibility: "hidden" }}
           />
           <div ref={historyRef} className="relative space-y-1">
-            {chats.map((c) => (
+            {chatList.length === 0 && (
+              <p className="px-3 py-2 text-xs text-slate-600">
+                {isLoading ? "Loading chats..." : "No chats yet"}
+              </p>
+            )}
+            {chatList.map((c) => (
               <button
                 key={c.id}
                 ref={(el) => (historyItemRefs.current[c.id] = el)}
-                onClick={() => {
-                  setActiveChat(c.id);
-                  closeSidebarOnMobile();
-                }}
+                onClick={() => openChat(c.id)}
                 onMouseEnter={(e) =>
                   gsap.to(e.currentTarget, { x: 4, duration: 0.2, ease: "power2.out" })
                 }
@@ -652,11 +717,11 @@ export default function ChatDashboard() {
                   gsap.to(e.currentTarget, { x: 0, duration: 0.2, ease: "power2.out" })
                 }
                 className={`relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm ${
-                  activeChat === c.id ? "text-white" : "text-slate-400 hover:text-slate-200"
+                  currentChatId === c.id ? "text-white" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 <MessageSquare className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-                <span className="truncate">{c.title}</span>
+                <span className="truncate">{c.title || "Untitled chat"}</span>
               </button>
             ))}
           </div>
@@ -721,7 +786,9 @@ export default function ChatDashboard() {
             <Menu ref={hamburgerIconRef} className="h-5 w-5" />
           </button>
           <span className="truncate font-display text-sm font-medium text-slate-200">
-            {hasStarted ? chats.find((c) => c.id === activeChat)?.title ?? "New chat" : "Nexus"}
+            {hasStarted
+              ? chatsById[currentChatId]?.title ?? "New chat"
+              : "Nexus"}
           </span>
         </div>
 
@@ -780,7 +847,7 @@ export default function ChatDashboard() {
             {/* Desktop chat header (mobile uses the top bar above) */}
             <div className="hidden items-center justify-between border-b border-white/5 px-6 py-4 lg:flex">
               <span className="font-display text-sm font-medium text-slate-200">
-                {chats.find((c) => c.id === activeChat)?.title ?? "New chat"}
+                {chatsById[currentChatId]?.title ?? "New chat"}
               </span>
               <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 font-mono text-[11px] text-slate-400">
                 {MODELS.find((m) => m.id === model)?.label}
@@ -792,7 +859,7 @@ export default function ChatDashboard() {
                 {messages.map((m, i) => (
                   <MessageBubble key={i} role={m.role} content={m.content} />
                 ))}
-                {isTyping && <TypingIndicator />}
+                {isLoading && <TypingIndicator />}
                 <div ref={bottomRef} />
               </div>
             </div>

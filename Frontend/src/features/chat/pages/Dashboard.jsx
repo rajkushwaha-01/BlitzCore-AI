@@ -5,12 +5,12 @@ import { setCurrentChatId } from "../chat.sclice";
 import gsap from "gsap";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import logoImg from "../../../../logo.jpg";
 import {
   Search,
   Plus,
   MessageSquare,
   Settings,
-  Zap,
   ChevronDown,
   Check,
   ArrowUp,
@@ -32,6 +32,12 @@ import {
  * "chat" slice via useSelector, and drives them through the useChat()
  * hook (handleGetChats / handleOpenChat / handleSendMessage) instead of
  * local dummy state.
+ *
+ * LOGO: the AI avatar (sidebar brand mark, AI message bubble, typing
+ * indicator) now renders logo.jpg instead of the Zap icon. Import path
+ * assumes logo.jpg sits at the Frontend project root — adjust the
+ * relative path below if you move the file, or better: drop it in
+ * /public and reference it as "/logo.jpg" instead of importing it.
  *
  * FIX #1 (this file): messages in MongoDB are stored with role "ai" /
  * "user" (see your Compass screenshot), but MessageBubble was checking
@@ -285,8 +291,8 @@ function TypingIndicator() {
 
   return (
     <div className="flex items-start gap-2.5 sm:gap-3">
-      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-violet-500">
-        <Zap className="h-3.5 w-3.5 text-slate-950" strokeWidth={2.5} />
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-cyan-400 to-violet-500">
+        <img src={logoImg} alt="AI" className="h-full w-full object-cover" />
       </div>
       <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-3">
         {[0, 1, 2].map((i) => (
@@ -371,8 +377,8 @@ function MessageBubble({ role, content }) {
   if (isAi) {
     return (
       <div ref={ref} className="flex items-start gap-2.5 sm:gap-3">
-        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-violet-500">
-          <Zap className="h-3.5 w-3.5 text-slate-950" strokeWidth={2.5} />
+        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-cyan-400 to-violet-500">
+          <img src={logoImg} alt="AI" className="h-full w-full object-cover" />
         </div>
         <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-slate-100 sm:max-w-md md:max-w-lg">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
@@ -611,13 +617,13 @@ export default function ChatDashboard() {
           <div className="flex items-center gap-2.5">
             <div
               ref={logoRef}
-              className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500"
+              className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500"
             >
-              <Zap className="h-4.5 w-4.5 text-slate-950" strokeWidth={2.5} />
+              <img src={logoImg} alt="BlitzCore AI" className="h-full w-full object-cover" />
             </div>
             <div>
               <p className="font-display text-lg font-semibold leading-tight tracking-tight">
-                Nexus
+                BlitzCore AI
               </p>
               <p className="text-xs text-slate-500">Pro Plan</p>
             </div>
@@ -788,7 +794,7 @@ export default function ChatDashboard() {
           <span className="truncate font-display text-sm font-medium text-slate-200">
             {hasStarted
               ? chatsById[currentChatId]?.title ?? "New chat"
-              : "Nexus"}
+              : "BlitzCore AI"}
           </span>
         </div>
 
@@ -882,7 +888,7 @@ export default function ChatDashboard() {
                       duration: 0.25,
                     })
                   }
-                  placeholder="Message Nexus..."
+                  placeholder="Message BlitzCore AI..."
                   className="w-full min-w-0 bg-transparent px-1 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
                 />
                 <div className="mt-2 flex items-center justify-between px-1">

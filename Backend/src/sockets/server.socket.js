@@ -1,10 +1,15 @@
 import { Server } from 'socket.io';
 
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 let io;
 export const initSocket = (httpServer) => {
     io = new Server(httpServer, {
         cors: {
-            origin: 'http://localhost:5173', // Replace with your frontend URL
+            origin: allowedOrigins,
             credentials: true,
         },
     });
